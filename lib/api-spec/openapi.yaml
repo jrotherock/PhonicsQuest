@@ -1,0 +1,396 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: phonics
+    description: Phonics Quest progress operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /profiles/{profileId}:
+    get:
+      operationId: getPhonicsProfile
+      tags: [phonics]
+      summary: Get a learner profile
+      parameters:
+        - $ref: "#/components/parameters/ProfileId"
+      responses:
+        "200":
+          description: Learner profile state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileState"
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: A parent PIN is already configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: initializePhonicsProfile
+      tags: [phonics]
+      summary: Create or initialize a learner profile
+      parameters:
+        - $ref: "#/components/parameters/ProfileId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileInitializeInput"
+      responses:
+        "200":
+          description: Existing or newly initialized profile state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileState"
+  /profiles/{profileId}/settings:
+    patch:
+      operationId: updatePhonicsProfileSettings
+      tags: [phonics]
+      summary: Update learner settings
+      parameters:
+        - $ref: "#/components/parameters/ProfileId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileSettingsInput"
+      responses:
+        "200":
+          description: Updated profile state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileState"
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /profiles/{profileId}/attempts:
+    post:
+      operationId: recordPhonicsAttempt
+      tags: [phonics]
+      summary: Record a phonics practice attempt
+      parameters:
+        - $ref: "#/components/parameters/ProfileId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptInput"
+      responses:
+        "200":
+          description: Updated profile state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileState"
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /profiles/{profileId}/pin:
+    put:
+      operationId: setPhonicsParentPin
+      tags: [phonics]
+      summary: Save a hashed grown-up PIN
+      parameters:
+        - $ref: "#/components/parameters/ProfileId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParentPinInput"
+      responses:
+        "200":
+          description: Updated profile state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileState"
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /profiles/{profileId}/pin/verify:
+    post:
+      operationId: verifyPhonicsParentPin
+      tags: [phonics]
+      summary: Verify a hashed grown-up PIN
+      parameters:
+        - $ref: "#/components/parameters/ProfileId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParentPinInput"
+      responses:
+        "200":
+          description: PIN verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PinVerification"
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  parameters:
+    ProfileId:
+      name: profileId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    SkillEvidence:
+      type: object
+      properties:
+        attempts:
+          type: number
+        correct:
+          type: number
+        firstTry:
+          type: number
+        hints:
+          type: number
+        transfer:
+          type: number
+        spelling:
+          type: number
+        reviewAttempts:
+          type: number
+        reviewCorrect:
+          type: number
+        heldAfterBreak:
+          type: number
+        lastPracticed:
+          type: ["string", "null"]
+          format: date
+      required:
+        - attempts
+        - correct
+        - firstTry
+        - hints
+        - transfer
+        - spelling
+        - reviewAttempts
+        - reviewCorrect
+        - heldAfterBreak
+        - lastPracticed
+    ProgressState:
+      type: object
+      properties:
+        streak:
+          type: number
+        stars:
+          type: number
+        mastered:
+          type: number
+        minutes:
+          type: number
+        recentSkill:
+          type: string
+        sessions:
+          type: number
+        lastActiveDate:
+          type: ["string", "null"]
+          format: date
+        skills:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/SkillEvidence"
+      required:
+        - streak
+        - stars
+        - mastered
+        - minutes
+        - recentSkill
+        - sessions
+        - lastActiveDate
+        - skills
+    ProgressInput:
+      type: object
+      properties:
+        streak:
+          type: number
+        stars:
+          type: number
+          minimum: 0
+        mastered:
+          type: number
+          minimum: 0
+        minutes:
+          type: number
+          minimum: 0
+        recentSkill:
+          type: string
+        sessions:
+          type: number
+          minimum: 0
+        lastActiveDate:
+          type: ["string", "null"]
+          format: date
+        skills:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/SkillEvidence"
+      required:
+        - streak
+        - stars
+        - mastered
+        - minutes
+        - recentSkill
+        - sessions
+        - lastActiveDate
+        - skills
+    QuestProgress:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [open, complete]
+        progress:
+          type: number
+      required: [id, status, progress]
+    ProfileState:
+      type: object
+      properties:
+        profileId:
+          type: string
+        audioEnabled:
+          type: boolean
+        parentPinConfigured:
+          type: boolean
+        progress:
+          $ref: "#/components/schemas/ProgressState"
+        questProgress:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestProgress"
+      required: [profileId, audioEnabled, parentPinConfigured, progress, questProgress]
+    ProfileInitializeInput:
+      type: object
+      properties:
+        audioEnabled:
+          type: boolean
+        legacyProgress:
+          oneOf:
+            - $ref: "#/components/schemas/ProgressInput"
+            - type: "null"
+        completedQuestIds:
+          type: array
+          items:
+            type: string
+      required: [audioEnabled]
+    ProfileSettingsInput:
+      type: object
+      properties:
+        audioEnabled:
+          type: boolean
+      required: [audioEnabled]
+    AttemptInput:
+      type: object
+      properties:
+        questId:
+          type: string
+        challengeId:
+          type: string
+        skill:
+          type: string
+          enum: [awareness, short-vowels, long-vowels, blends, syllables, encoding, tricky-words, reading]
+        correct:
+          type: boolean
+        firstTry:
+          type: boolean
+        hinted:
+          type: boolean
+        transfer:
+          type: boolean
+        spelling:
+          type: boolean
+        review:
+          type: boolean
+        finalChallenge:
+          type: boolean
+      required:
+        - questId
+        - challengeId
+        - skill
+        - correct
+        - firstTry
+        - hinted
+        - transfer
+        - spelling
+        - review
+        - finalChallenge
+    ParentPinInput:
+      type: object
+      properties:
+        pinHash:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+      required: [pinHash]
+    PinVerification:
+      type: object
+      properties:
+        valid:
+          type: boolean
+      required: [valid]
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
