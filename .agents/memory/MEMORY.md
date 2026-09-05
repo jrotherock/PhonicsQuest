@@ -1,0 +1,4 @@
+- [First-play experience](phonics-quest-decisions.md) — keep phonics practice instant-start and low-friction; server progress uses an anonymous browser profile ID rather than an account.
+- [Evidence-led route](phonics-quest-decisions.md) — child recommendation and parent roadmap must share one explicit phonics sequence and advancement rule.
+- [Browser regression checks](phonics-quest-decisions.md) — Playwright route tests use Replit’s system Chromium and the app’s required Vite environment variables.
+- [Anonymous privacy boundary](phonics-quest-decisions.md) — profile IDs are bearer-like and the four-digit PIN is a privacy gate, not account authentication.
