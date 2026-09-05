@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Phonics Quest"
+description = "A playful phonics learning game for early readers, with short and long vowel practice, word stretching, syllable challenges, digraph hunts, and encouraging progress for kids and their grown-ups."
+version = "1.0.0"
+id = "artifacts/phonics-quest"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/", "/api" ]
+localPort = 20795
+
+[services.development]
+run = "pnpm --filter @workspace/phonics-quest run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/phonics-quest", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/phonics-quest/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20795"
+BASE_PATH = "/"
