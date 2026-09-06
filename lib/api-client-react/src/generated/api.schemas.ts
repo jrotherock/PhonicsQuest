@@ -127,3 +127,15 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface FamilyAccessUnlockInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  code: string;
+}
+
+export interface FamilyAccessStatus {
+  unlocked: boolean;
+}
+
