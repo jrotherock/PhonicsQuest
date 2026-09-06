@@ -26,6 +26,60 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /family-access/status:
+    get:
+      operationId: getFamilyAccessStatus
+      tags: [family-access]
+      summary: Check whether this browser has family access
+      responses:
+        "200":
+          description: Family access status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyAccessStatus"
+  /family-access/unlock:
+    post:
+      operationId: unlockFamilyAccess
+      tags: [family-access]
+      summary: Unlock the app with the shared family access phrase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FamilyAccessUnlockInput"
+      responses:
+        "200":
+          description: Family access granted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyAccessStatus"
+        "400":
+          description: Invalid access phrase input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Incorrect access phrase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many access attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Family access has not been configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /profiles/{profileId}:
     get:
       operationId: getPhonicsProfile
@@ -393,4 +447,18 @@ components:
           type: string
       required:
         - status
+    FamilyAccessUnlockInput:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required: [code]
+    FamilyAccessStatus:
+      type: object
+      properties:
+        unlocked:
+          type: boolean
+      required: [unlocked]
 
