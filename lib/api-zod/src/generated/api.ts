@@ -18,6 +18,30 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Check whether this browser has family access
+ */
+export const GetFamilyAccessStatusResponse = zod.object({
+  "unlocked": zod.boolean()
+})
+
+
+/**
+ * @summary Unlock the app with the shared family access phrase
+ */
+export const unlockFamilyAccessBodyCodeMax = 200;
+
+
+
+export const UnlockFamilyAccessBody = zod.object({
+  "code": zod.string().min(1).max(unlockFamilyAccessBodyCodeMax)
+})
+
+export const UnlockFamilyAccessResponse = zod.object({
+  "unlocked": zod.boolean()
+})
+
+
+/**
  * @summary Get a learner profile
  */
 export const GetPhonicsProfileParams = zod.object({
