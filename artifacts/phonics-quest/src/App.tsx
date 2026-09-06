@@ -8,8 +8,10 @@ import {
 import { Link, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
 import {
   initializePhonicsProfile,
+  getFamilyAccessStatus,
   recordPhonicsAttempt,
   setPhonicsParentPin,
+  unlockFamilyAccess,
   updatePhonicsProfileSettings,
   verifyPhonicsParentPin,
   type ProfileState,
@@ -328,7 +330,9 @@ function Logo() {
   return <Link href="/" className="brand-mark" data-testid="link-home"><span className="brand-icon"><WandSparkles size={21} /></span><span className="brand-name">Phonics <span>Quest</span></span></Link>;
 }
 function Shell({ children, audioEnabled, onToggleAudio }: { children: ReactNode; audioEnabled: boolean; onToggleAudio: () => void }) {
-  return <div className="app-shell"><div className="shell-inner"><header className="topbar"><Logo /><div className="topbar-actions"><button className={`audio-toggle ${audioEnabled ? 'on' : ''}`} type="button" onClick={onToggleAudio} aria-pressed={audioEnabled} data-testid="button-toggle-audio">{audioEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}<span>{audioEnabled ? 'Listen on' : 'Listen off'}</span></button><Link href="/grown-up" className="grownup-link" data-testid="link-grown-up"><UserRound size={14} /> Grown-up view</Link></div></header>{children}</div></div>;
+  const [location] = useLocation();
+  const grownUpMode = location === '/grown-up';
+  return <div className="app-shell"><div className="shell-inner"><header className="topbar"><div className="topbar-left">{grownUpMode ? <Link href="/" className="back-child-link" data-testid="link-child-view"><ChevronLeft size={16} /> Back to child view</Link> : <Logo />}</div><div className="topbar-actions"><button className={`audio-toggle ${audioEnabled ? 'on' : ''}`} type="button" onClick={onToggleAudio} aria-pressed={audioEnabled} data-testid="button-toggle-audio">{audioEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}<span>{audioEnabled ? 'Listen on' : 'Listen off'}</span></button>{!grownUpMode && <Link href="/grown-up" className="grownup-link" data-testid="link-grown-up"><UserRound size={14} /> Grown-up view</Link>}</div></header>{children}</div></div>;
 }
 function speak(text: string, enabled: boolean) {
   if (!enabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
@@ -498,6 +502,34 @@ function ParentGate({ profileId, hasPin, audioEnabled, onToggleAudio, onBack, on
   return <Shell audioEnabled={audioEnabled} onToggleAudio={onToggleAudio}><main className="parent-gate-page"><section className="parent-gate-card" aria-labelledby="parent-gate-heading"><div className="lesson-icon parent-gate-icon"><LockKeyhole size={30} /></div><div className="eyebrow parent-gate-eyebrow"><span className="eyebrow-line" /> A grown-up checkpoint</div><h1 id="parent-gate-heading">{hasPin ? <>Enter the <em>lantern PIN.</em></> : <>Create a <em>lantern PIN.</em></>}</h1><p className="parent-gate-copy">{hasPin ? 'This keeps the progress map tucked away while a child is playing.' : 'Choose four numbers to keep the progress map tucked away while a child is playing.'}</p><form className="parent-gate-form" onSubmit={submit}><label className="pin-field"><span>{hasPin ? 'Grown-up PIN' : 'Choose a 4-digit PIN'}</span><input type="password" inputMode="numeric" autoComplete="off" pattern="[0-9]{4}" maxLength={4} value={pin} onChange={(event) => setPin(event.target.value.replace(/\D/g, '').slice(0, 4))} autoFocus aria-describedby={error ? 'parent-gate-error' : 'parent-gate-note'} /></label>{!hasPin && <label className="pin-field"><span>Enter it again</span><input type="password" inputMode="numeric" autoComplete="off" pattern="[0-9]{4}" maxLength={4} value={confirmation} onChange={(event) => setConfirmation(event.target.value.replace(/\D/g, '').slice(0, 4))} /></label>}{error && <p className="parent-gate-error" id="parent-gate-error" role="alert">{error}</p>}<button className="primary-button large" type="submit" disabled={busy}>{busy ? 'Checking…' : hasPin ? 'Open grown-up view' : 'Save PIN and continue'} <ChevronRight size={16} /></button></form><p className="parent-gate-note" id="parent-gate-note">Only a one-way PIN hash is stored with this learner profile. It is a privacy step, not an online account.</p><button className="secondary-button parent-gate-back" type="button" onClick={onBack}><ChevronLeft size={15} /> Back to the map</button></section></main></Shell>;
 }
 
+function FamilyAccessGate({ onUnlock }: { onUnlock: () => void }) {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    if (!code.trim()) {
+      setError('Please enter the family access phrase.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await unlockFamilyAccess({ code: code.trim() });
+      onUnlock();
+    } catch (caught) {
+      const message = caught as { data?: { error?: string } };
+      setError(message.data?.error ?? 'That phrase did not open the family lantern.');
+      setCode('');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <main className="parent-gate-page family-access-page"><section className="parent-gate-card" aria-labelledby="family-access-heading"><div className="lesson-icon parent-gate-icon"><LockKeyhole size={30} /></div><div className="eyebrow parent-gate-eyebrow"><span className="eyebrow-line" /> A family-only lantern</div><h1 id="family-access-heading">Open the <em>family gate.</em></h1><p className="parent-gate-copy">This storybook is tucked away for your family. Enter the shared access phrase to begin.</p><form className="parent-gate-form" onSubmit={submit}><label className="pin-field"><span>Family access phrase</span><input type="password" autoComplete="current-password" value={code} onChange={(event) => setCode(event.target.value)} autoFocus aria-describedby={error ? 'family-access-error' : 'family-access-note'} /></label>{error && <p className="parent-gate-error" id="family-access-error" role="alert">{error}</p>}<button className="primary-button large" type="submit" disabled={busy}>{busy ? 'Opening…' : 'Enter the storybook'} <ChevronRight size={16} /></button></form><p className="parent-gate-note" id="family-access-note">This shared phrase only opens the app. The grown-up PIN still protects the progress view.</p></section></main>;
+}
+
 function GrownUp({ state, onToggleAudio }: { state: SavedState; onToggleAudio: () => void }) {
   const quests = getVisibleQuests(state);
   const route = getCurriculumRoute(state);
@@ -600,6 +632,29 @@ function AppRouter() {
   return <><Switch><Route path="/grown-up">{parentUnlocked ? <GrownUp state={state} onToggleAudio={toggleAudio} /> : <ParentGate profileId={profileId} hasPin={state.parentPinConfigured} audioEnabled={state.audioEnabled} onToggleAudio={toggleAudio} onBack={() => setLocation('/')} onUnlock={() => setParentUnlocked(true)} onProfile={applyProfile} />}</Route><Route path="/quest/:id">{(params) => { const quest = getVisibleQuests(state).find((item) => item.id === params.id); return quest ? <Lesson quest={quest} state={state} onBack={() => setLocation('/')} onRecord={recordAnswer} onHint={recordHint} onToggleAudio={toggleAudio} /> : <NotFound audioEnabled={state.audioEnabled} onToggleAudio={toggleAudio} />; }}</Route><Route path="/"><Hub state={state} onSelect={(id) => setLocation(`/quest/${id}`)} onToggleAudio={toggleAudio} /></Route><Route><NotFound audioEnabled={state.audioEnabled} onToggleAudio={toggleAudio} /></Route></Switch>{syncStatus === 'offline' && <div className="sync-warning" role="status" data-testid="status-sync-offline">The lantern shelf is offline. New progress is only on this screen until the connection returns.</div>}</>;
 }
 function App() {
+  const [accessState, setAccessState] = useState<'checking' | 'locked' | 'unlocked' | 'unavailable'>('checking');
+
+  useEffect(() => {
+    let active = true;
+    getFamilyAccessStatus()
+      .then((status) => {
+        if (active) setAccessState(status.unlocked ? 'unlocked' : 'locked');
+      })
+      .catch(() => {
+        if (active) setAccessState('unavailable');
+      });
+    return () => { active = false; };
+  }, []);
+
+  if (accessState === 'checking') {
+    return <main className="not-found"><div className="lesson-icon"><Sparkles size={30} /></div><h1 className="page-title">Checking the <em>family gate.</em></h1><p className="page-lede" style={{ marginInline: 'auto' }}>The storybook is waking up.</p></main>;
+  }
+  if (accessState === 'unavailable') {
+    return <main className="not-found"><div className="lesson-icon"><LockKeyhole size={30} /></div><h1 className="page-title">The gate is <em>sleeping.</em></h1><p className="page-lede" style={{ marginInline: 'auto' }}>The family access service is not available right now. Please try again in a moment.</p></main>;
+  }
+  if (accessState === 'locked') {
+    return <FamilyAccessGate onUnlock={() => setAccessState('unlocked')} />;
+  }
   return <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><AppRouter /></WouterRouter>;
 }
 export default App;
