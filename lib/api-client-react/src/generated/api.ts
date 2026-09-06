@@ -22,6 +22,8 @@ import type {
 import type {
   AttemptInput,
   ErrorResponse,
+  FamilyAccessStatus,
+  FamilyAccessUnlockInput,
   HealthStatus,
   ParentPinInput,
   PinVerification,
@@ -134,6 +136,154 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+
+export const getGetFamilyAccessStatusUrl = () => {
+
+
+
+
+  return `/api/family-access/status`
+}
+
+/**
+ * @summary Check whether this browser has family access
+ */
+export const getFamilyAccessStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<FamilyAccessStatus> => {
+
+  return customFetch<FamilyAccessStatus>(getGetFamilyAccessStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFamilyAccessStatusQueryKey = () => {
+    return [
+    `/api/family-access/status`
+    ] as const;
+    }
+
+
+export const getGetFamilyAccessStatusQueryOptions = <TData = Awaited<ReturnType<typeof getFamilyAccessStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFamilyAccessStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFamilyAccessStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFamilyAccessStatus>>> = ({ signal }) => getFamilyAccessStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFamilyAccessStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFamilyAccessStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getFamilyAccessStatus>>>
+export type GetFamilyAccessStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Check whether this browser has family access
+ */
+
+export function useGetFamilyAccessStatus<TData = Awaited<ReturnType<typeof getFamilyAccessStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFamilyAccessStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFamilyAccessStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUnlockFamilyAccessUrl = () => {
+
+
+
+
+  return `/api/family-access/unlock`
+}
+
+/**
+ * @summary Unlock the app with the shared family access phrase
+ */
+export const unlockFamilyAccess = async (familyAccessUnlockInput: FamilyAccessUnlockInput, options?: Parameters<typeof customFetch>[1]): Promise<FamilyAccessStatus> => {
+
+  return customFetch<FamilyAccessStatus>(getUnlockFamilyAccessUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(familyAccessUnlockInput)
+  }
+);}
+
+
+
+
+
+export const getUnlockFamilyAccessMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlockFamilyAccess>>, TError,{data: BodyType<FamilyAccessUnlockInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unlockFamilyAccess>>, TError,{data: BodyType<FamilyAccessUnlockInput>}, TContext> => {
+
+const mutationKey = ['unlockFamilyAccess'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unlockFamilyAccess>>, {data: BodyType<FamilyAccessUnlockInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  unlockFamilyAccess(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnlockFamilyAccessMutationResult = NonNullable<Awaited<ReturnType<typeof unlockFamilyAccess>>>
+    export type UnlockFamilyAccessMutationBody = BodyType<FamilyAccessUnlockInput>
+    export type UnlockFamilyAccessMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Unlock the app with the shared family access phrase
+ */
+export const useUnlockFamilyAccess = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlockFamilyAccess>>, TError,{data: BodyType<FamilyAccessUnlockInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unlockFamilyAccess>>,
+        TError,
+        {data: BodyType<FamilyAccessUnlockInput>},
+        TContext
+      > => {
+      return useMutation(getUnlockFamilyAccessMutationOptions(options));
+    }
 
 export const getGetPhonicsProfileUrl = (profileId: string,) => {
 
