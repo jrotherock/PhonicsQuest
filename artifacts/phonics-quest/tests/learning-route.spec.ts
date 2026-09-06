@@ -22,6 +22,15 @@ type SeededSkills = Partial<Record<SkillId, EvidenceSeed>>;
 
 const readySkill: EvidenceSeed = { attempts: 3, correct: 3, firstTry: 3, transfer: 1 };
 
+async function unlockFamilyGate(page: Page) {
+  const familyCode = process.env.FAMILY_ACCESS_CODE;
+  if (!familyCode) throw new Error('FAMILY_ACCESS_CODE is required for route tests.');
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: /Open the family gate/ })).toBeVisible();
+  await page.getByLabel('Family access phrase').fill(familyCode);
+  await page.getByRole('button', { name: /Enter the storybook/ }).click();
+}
+
 async function openHub(page: Page, skills: SeededSkills = {}) {
   await page.addInitScript((seed) => {
     window.localStorage.setItem(
@@ -29,9 +38,33 @@ async function openHub(page: Page, skills: SeededSkills = {}) {
       JSON.stringify({ version: 2, progress: { skills: seed } }),
     );
   }, skills);
-  await page.goto('/');
+  await unlockFamilyGate(page);
   await expect(page.getByTestId('section-lantern-trail')).toBeVisible();
 }
+
+test('requires the family access phrase before showing the child app', async ({ page }) => {
+  await page.route('**/api/family-access/unlock', async (route) => {
+    await route.fulfill({ status: 401, json: { error: 'That phrase did not open the family lantern.' } });
+  });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: /Open the family gate/ })).toBeVisible();
+  await expect(page.getByTestId('section-lantern-trail')).toHaveCount(0);
+  await page.getByLabel('Family access phrase').fill('wrong phrase');
+  await page.getByRole('button', { name: /Enter the storybook/ }).click();
+  await expect(page.getByRole('alert')).toHaveText('That phrase did not open the family lantern.');
+});
+
+test('keeps profile APIs protected without the family cookie', async ({ page }) => {
+  const response = await page.request.get('/api/profiles/00000000-0000-4000-8000-000000000000');
+  expect(response.status()).toBe(401);
+});
+
+test('keeps the family unlock after a browser reload', async ({ page }) => {
+  await unlockFamilyGate(page);
+  await expect(page.getByTestId('section-lantern-trail')).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId('section-lantern-trail')).toBeVisible();
+});
 
 test('shows the initial recommendation and plays it from the child hub', async ({ page }) => {
   await openHub(page);
@@ -120,6 +153,8 @@ test('opens reading and keeps the grown-up route aligned with the child hub', as
   await page.getByLabel('Enter it again').fill('1234');
   await page.getByRole('button', { name: /Save PIN and continue/ }).click();
   await expect(page.getByRole('heading', { name: /Her trail, at a glance/ })).toBeVisible();
+  await expect(page.getByTestId('link-child-view')).toHaveText(/Back to child view/);
+  await expect(page.getByTestId('link-grown-up')).toHaveCount(0);
 
   const currentRoadmapStep = page.locator('.roadmap-step.current');
   await expect(currentRoadmapStep.locator('h3')).toHaveText(childLabel);
